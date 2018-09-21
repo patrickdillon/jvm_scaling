@@ -1,0 +1,41 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: scaling
+spec:
+  selector:
+    matchLabels:
+      app: server
+  replicas: 1
+  template: # create pods using pod definition in this template
+    metadata:
+      labels:
+        app: server
+    spec:
+      volumes:
+      - name: log-volume
+        emptyDir: {}
+        #hostPath:
+        #   path: ###
+      containers:
+      - name: wildfly-server
+        image: patrickdillon/wildfly-server
+        volumeMounts:
+        - mountPath: /gclog
+          name: log-volume
+        env:
+        - name: MAX_HFR
+          value: "40"
+        - name: MIN_HFR
+          value: "20"
+        - name: JAVA_OPTS
+          value: " -verbose:gc -XX:+PrintGC -XX:+PrintGCDateStamps -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/gclog/`date +%d-%H-%M`-${MAX_HFR} -XX:+PrintCommandLineFlags -Xms32m -Xmx1500m -XX:MaxHeapFreeRatio=${MAX_HFR} -XX:MinHeapFreeRatio=20  -Djava.net.preferIPv4Stack=true -Djboss.modules.system.pkgs=org.jboss.byteman -Djava.awt.headless=true -XX:GCTimeRatio=4
+-XX:AdaptiveSizePolicyWeight=90" 
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "3Gi"
+            cpu: "3"
+        ports:
+        - containerPort: 8080
+
